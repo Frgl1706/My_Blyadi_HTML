@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>至高の毛生成器・生体スキンラボボード</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=M+PLUS+1p:wght@100;200;400;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --red-color: #ff0000;
+            --bg-color: #0b0e14;
+            --card-bg: #151922;
+            --text-color: #c9d1d9;
+            --koruri-font: 'M PLUS 1p', 'Kosugi Maru', sans-serif;
+        }
+        
+        body {
+            font-family: var(--koruri-font);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: #b30000;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .header-title {
+            font-size: 1.2rem;
+            font-weight: 900;
+            font-style: italic;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+        
+        .mobile-tabs {
+            display: flex;
+            background: #1a1f2c;
+            border-bottom: 2px solid var(--red-color);
+            position: sticky;
+            top: 45px;
+            z-index: 99;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 5px;
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-family: var(--koruri-font);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-align: center;
+        }
+        .tab-btn.active {
+            color: #fff;
+            background: var(--card-bg);
+            border-bottom: 3px solid var(--red-color);
+        }
+
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .tab-content { display: none; width: 100%; }
+        .tab-content.active { display: flex; flex-direction: column; gap: 12px; }
+
+        .box {
+            background-color: var(--card-bg);
+            border: 1px solid #2d3545;
+            border-radius: 6px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .box-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #fff;
+            border-left: 4px solid var(--red-color);
+            padding-left: 8px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        /* 3Dビュー：薄い水色背景のための外枠 */
+        .view-3d-container {
+            width: 100%;
+            height: 40vh;
+            min-height: 260px;
+            border: 2px solid #2d3545;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        #canvas3d { width: 100%; height: 100%; }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .action-btn {
+            font-family: var(--koruri-font);
+            background: #b30000;
+            border: none;
+            color: #fff;
+            padding: 14px 10px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .action-btn.spray { background: #d4af37; color: #000; }
+        .action-btn:active { transform: scale(0.98); filter: brightness(1.1); }
+
+        .control-group { margin-bottom: 12px; text-align: left; }
+        .control-group label { display: block; margin-bottom: 5px; color: #8b949e; font-size: 0.8rem; }
+        .control-group input[type="range"] { width: 100%; height: 8px; background: #222a3a; border-radius: 4px; outline: none; -webkit-appearance: none; }
+        .control-group input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--red-color); cursor: pointer; }
+
+        .desc-text {
+            text-align: left;
+            font-size: 0.88rem;
+            font-weight: 400;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: #c9d1d9;
+            background: #0d111a;
+            padding: 14px;
+            border-radius: 6px;
+            border: 1px solid #2d3545;
+        }
+        .highlight-red { color: #ff4500; font-weight: 900; }
+        .highlight-blue { color: #58a6ff; font-weight: 900; }
+        .highlight-gold { color: #e6b81e; font-weight: 900; }
+
+        .param-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .param-row { display: flex; flex-direction: column; background: #0d111a; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #30363d; text-align: left; }
+        .param-name { font-size: 0.7rem; color: #8b949e; font-weight: 200; }
+        .param-val { font-size: 0.85rem; color: #58a6ff; font-weight: 700; margin-top: 2px; }
+
+        .chart-container { position: relative; width: 100%; height: 160px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">PUBIC HAIR EXPERIMENT LAB</div>
+</header>
+
+<div class="mobile-tabs">
+    <button class="tab-btn active" onclick="switchTab(this, 'tab-main')">LAB VIEW</button>
+    <button class="tab-btn" onclick="switchTab(this, 'tab-desc')">ANALYZE REPORT</button>
+    <button class="tab-btn" onclick="switchTab(this, 'tab-charts')">DATA MATRIX</button>
+</div>
+
+<div class="workspace">
+    
+    <div id="tab-main" class="tab-content active">
+        <div class="view-3d-container">
+            <div id="canvas3d"></div>
+        </div>
+
+        <div class="box">
+            <div class="box-title">物理錬成・流体トリガー</div>
+            <div class="btn-grid">
+                <button class="action-btn" onclick="executeGeneration()">物理錬成実行</button>
+                <button class="action-btn spray" onclick="fireFluidSpray()">黄流体 噴射</button>
+            </div>
+            
+            <div class="control-group">
+                <label>毛色系統</label>
+                <select id="hairColorSelect" onchange="updateSettings()" style="width:100%; background:#222a3a; color:#fff; border:1px solid #444; padding:8px; font-family:var(--koruri-font); font-weight:700;">
+                    <option value="black">黒髪 (漆黒)</option>
+                    <option value="gold">金髪 (欧州)</option>
+                    <option value="silver">銀髪 (神秘)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>本数密度 (Base N)</label>
+                <input type="range" id="param-density" min="100" max="1000" value="450" onchange="updateSettings()">
+            </div>
+            <div class="control-group">
+                <label>基本長さ L (mm)</label>
+                <input type="range" id="param-length" min="5" max="40" value="20" onchange="updateSettings()">
+            </div>
+            <div class="control-group">
+                <label>固有ちぢれ度</label>
+                <input type="range" id="param-curl" min="0" max="100" value="45" onchange="updateSettings()">
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-desc" class="tab-content">
+        <div class="box">
+            <div class="box-title">AI毛根状態・詳細解析報告書</div>
+            <div class="desc-text" id="ai-description">「物理錬成実行」をタップすると、180°Z軸回転した腹部皮膚マテリアルに基づき超詳細なプロファイルが展開されます。</div>
+        </div>
+    </div>
+
+    <div id="tab-charts" class="tab-content">
+        <div class="box">
+            <div class="box-title">テクニカル・インジケーター</div>
+            <div class="chart-container"><canvas id="trendChart"></canvas></div>
+            <div class="chart-container"><canvas id="oscillatorChart"></canvas></div>
+        </div>
+
+        <div class="box">
+            <div class="box-title">100大物理マトリクス (極細スマート表示)</div>
+            <div class="param-matrix" id="matrix-box"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function switchTab(btn, tabId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        if(tabId === 'tab-main') onResize();
+    }
+
+    const pList = [
+        { id:1, name:"質量 m", unit:"g", base:0.0006 }, { id:3, name:"密度 ρ", unit:"g/cm³", base:1.32 },
+        { id:5, name:"体積 V", unit:"mm³", base:0.45 }, { id:7, name:"長さ L", unit:"mm", base:20 },
+        { id:13, name:"周波数 f", unit:"Hz", base:2.4 }, { id:21, name:"引張力 F", unit:"N", base:1.2 },
+        { id:26, name:"応力 σ", unit:"MPa", base:48 }, { id:31, name:"ヤング率 E", unit:"GPa", base:3.8 },
+        { id:57, name:"保温効率", unit:"%", base:78 }, { id:61, name:"局所温度", unit:"°C", base:36.5 },
+        { id:69, name:"エントロピー", unit:"J/K", base:1.6e-4 }, { id:77, name:"レイノルズ数", unit:"-", base:0.85 }
+    ];
+
+    const odors = ["微アンモニア水の香りの", "海鮮臭の", "ツンと鼻を突く", "熟成された発酵臭を放つ", "荒々しい太平洋の潮風を感じる"];
+    const shapes = ["こんがらがった", "真っ直ぐ揃った", "迷宮の如く入り組んだ", "定規で引いたように美しい"];
+
+    let scene, camera, renderer, sphereMesh, hairLines = [], particleSystem = null, isSpraying = false, sprayTimer = 0;
+    let trendChart, oscillatorChart;
+
+    function initCharts() {
+        const ctxTrend = document.getElementById('trendChart').getContext('2d');
+        trendChart = new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: ['t-4', 't-3', 't-2', 't-1', '現在'],
+                datasets: [{ label: 'ヤング率(E)', data: [3.5, 3.6, 3.7, 3.75, 3.8], borderColor: '#58a6ff', backgroundColor: 'transparent', borderWidth: 2 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        const ctxOsc = document.getElementById('oscillatorChart').getContext('2d');
+        oscillatorChart = new Chart(ctxOsc, {
+            type: 'bar',
+            data: {
+                labels: ['応力', '摩擦', '熱流', '帯電', 'カオス'],
+                datasets: [{ label: '波動数', data: [40, 55, 30, 85, 45], backgroundColor: '#ff4500' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    // 人間の腹の皮膚テクスチャをプログラムでリアルに再現（DataURL生成）
+    function createBellySkinTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        // 腹の皮膚のベースカラー（リアルなスキンカラー）
+        ctx.fillStyle = '#ffcca3';
+        ctx.fillRect(0, 0, 512, 512);
+        
+        // 皮膚のキメ・シワ（材料力学的テクスチャ）
+        ctx.strokeStyle = '#f2b88e';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 200; i++) {
+            ctx.beginPath();
+            ctx.moveTo(Math.random() * 512, Math.random() * 512);
+            ctx.lineTo(Math.random() * 512, Math.random() * 512);
+            ctx.stroke();
+        }
+        // 微細な毛穴・斑点ドット
+        for (let i = 0; i < 1000; i++) {
+            ctx.fillStyle = Math.random() > 0.5 ? '#e6a57e' : '#ffa585';
+            ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5);
+        }
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    function init3D() {
+        const container = document.getElementById('canvas3d');
+        scene = new THREE.Scene();
+
+        // 【指示：3Dビュー背景を黒色から薄い水色に変更】
+        scene.background = new THREE.Color(0xdcefff); 
+
+        camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 3.6, 5.0); 
+        camera.lookAt(0, 2.7, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // 背景が明るくなったため、陰影をはっきりさせるためのディレクショナルライトと環境光のブレンド
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+
+        const geometry = new THREE.SphereGeometry(4, 64, 64);
+        
+        // 【指示：球体には人間の腹の皮膚の画像のマテリアルを貼る】
+        const skinTexture = createBellySkinTexture();
+        const material = new THREE.MeshStandardMaterial({ 
+            map: skinTexture,
+            roughness: 0.6,
+            metalness: 0.0
+        });
+        
+        sphereMesh = new THREE.Mesh(geometry, material);
+
+        // 【指示：球体を180°Z軸回転させてください(右手系)】
+        // 右手系においてZ軸の正の方向から見て反時計回りに180度（πラジアン）回転
+        sphereMesh.rotation.z = Math.PI;
+
+        scene.add(sphereMesh);
+
+        initFluidParticles();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (isSpraying && particleSystem) {
+                const positions = particleSystem.geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    // 球体がZ軸180°回転したことに伴い、噴射重力ベクトルを最適化（勢いよく噴出）
+                    positions[i+1] += 0.1; 
+                    positions[i] += (Math.random() - 0.5) * 0.04;
+                    positions[i+2] += (Math.random() - 0.5) * 0.04;
+                    if (positions[i+1] > 8) {
+                        positions[i] = (Math.random() - 0.5) * 0.2;
+                        positions[i+1] = 3.9;
+                        positions[i+2] = (Math.random() - 0.5) * 0.2;
+                    }
+                }
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+                sprayTimer--;
+                if(sprayTimer <= 0) { isSpraying = false; scene.remove(particleSystem); }
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+        updateSettings();
+    }
+
+    function initFluidParticles() {
+        const pCount = 600;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(pCount * 3);
+        for(let i=0; i<pCount*3; i+=3) {
+            positions[i] = (Math.random() - 0.5) * 0.1;
+            positions[i+1] = 3.9;
+            positions[i+2] = (Math.random() - 0.5) * 0.1;
+        }
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const material = new THREE.PointsMaterial({
+            color: 0xffdd00, size: 0.07, transparent: true, opacity: 0.3
+        });
+        particleSystem = new THREE.Points(geometry, material);
+    }
+
+    function fireFluidSpray() {
+        isSpraying = true;
+        sprayTimer = 150;
+        scene.add(particleSystem);
+    }
+
+    function onResize() {
+        const container = document.getElementById('canvas3d');
+        if(!container || !renderer) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    function updateSettings() {
+        if (!sphereMesh) return;
+        const hairColor = document.getElementById("hairColorSelect").value;
+        let hairHex = 0x0a0a0a;
+        if (hairColor === "gold") hairHex = 0xd4af37;
+        if (hairColor === "silver") hairHex = 0xcccccc;
+
+        const density = parseInt(document.getElementById("param-density").value);
+        const lengthVal = parseInt(document.getElementById("param-length").value);
+        const curlVal = parseInt(document.getElementById("param-curl").value);
+
+        const matrixBox = document.getElementById("matrix-box");
+        matrixBox.innerHTML = "";
+        pList.forEach(p => {
+            let val = p.base * (lengthVal / 20) * (1 + (curlVal/100)*0.1);
+            if (p.id === 7) val = lengthVal;
+            if (p.id === 13) val = p.base * (curlVal/45);
+            const row = document.createElement("div");
+            row.className = "param-row";
+            row.innerHTML = `<span class="param-name">NO.${p.id} ${p.name}</span><span class="param-val">${val.toFixed(4)} ${p.unit}</span>`;
+            matrixBox.appendChild(row);
+        });
+
+        hairLines.forEach(hair => sphereMesh.remove(hair));
+        hairLines = [];
+        const radius = 4.0;
+
+        for (let i = 0; i < density; i++) {
+            const u = Math.random();
+            const v = Math.random() * 0.22;
+            const theta = u * 2.0 * Math.PI;
+            const phi = Math.acos(2.0 * v - 1.0);
+            const startPoint = new THREE.Vector3(radius * Math.sin(phi) * Math.cos(theta), radius * Math.sin(phi) * Math.sin(theta), radius * Math.cos(phi));
+            const normal = startPoint.clone().normalize();
+            const points = [startPoint.clone()];
+            let currentPoint = startPoint.clone();
+
+            for (let j = 0; j < 12; j++) {
+                const step = normal.clone().multiplyScalar((lengthVal/12) / 12);
+                const curlIntensity = curlVal / 140;
+                currentPoint.add(step).add(new THREE.Vector3((Math.random()-0.5)*curlIntensity, (Math.random()-0.5)*curlIntensity, (Math.random()-0.5)*curlIntensity));
+                points.push(currentPoint.clone());
+            }
+            const curve = new THREE.CatmullRomCurve3(points);
+            const hairGeometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(15));
+            const hairLine = new THREE.Line(hairGeometry, new THREE.LineBasicMaterial({ color: hairHex }));
+            sphereMesh.add(hairLine);
+            hairLines.push(hairLine);
+        }
+
+        if(trendChart && oscillatorChart) {
+            trendChart.data.datasets[0].data = [3.4, 3.5, 3.6, 3.6 + (lengthVal/40), 3.4 + (curlVal/30)];
+            trendChart.update();
+            oscillatorChart.data.datasets[0].data = [curlVal, density/10, lengthVal*2, curlVal*1.2, (density*curlVal)/500];
+            oscillatorChart.update();
+        }
+    }
+
+    function executeGeneration() {
+        const rOdor = odors[Math.floor(Math.random() * odors.length)];
+        const rShape = shapes[Math.floor(Math.random() * shapes.length)];
+        const hairColor = document.getElementById("hairColorSelect").value;
+
+        let descHtml = `【陰毛解析報告書：生体スキンラボ版】\n\n`;
+        descHtml += `本検体は、右手系に基づき <span class="highlight-red">Z軸を中心に180°反転固定</span> された、極めて生々しい「人間の腹の皮膚マテリアル」の直上に錬成された。\n`;
+        descHtml += `反転した毛根角より生じる <span class="highlight-blue">${rShape}形状</span> は、下腹部特有のキメに沿ってカオスに展開。そこから放たれる独自の香り成分は、測定器の限界を突破するほどの <span class="highlight-blue">${rOdor}</span> を定常的に放射している。\n\n`;
+        descHtml += `表皮の弾性マトリクスと、<span class="highlight-gold">${hairColor}系統</span> のケラチン繊維が交わる境界（ジャンクション）では、かつてない応力集中を計測。`;
+        descHtml += `薄い水色のクリーンな背景とコントラストをなすこの生体構造は、<span class="highlight-red">流体噴射時の摩擦損失係数を劇的に低下</span> させる設計となっている。\n\n`;
+        descHtml += `総評として、このマテリアル変更は学術的リアリズムを極限まで引き上げることに成功しており、<span class="highlight-blue">視覚的・力学的カオスが完成された</span> 実験サンプルである。`;
+
+        document.getElementById("ai-description").innerHTML = descHtml;
+
+        if (rShape.includes("真っ直ぐ")) document.getElementById("param-curl").value = 3;
+        if (rShape.includes("こんがらがった")) document.getElementById("param-curl").value = 95;
+        updateSettings();
+    }
+
+    window.onload = () => {
+        initCharts();
+        init3D();
+        executeGeneration();
+    };
+    window.addEventListener('resize', onResize);
+</script>
+</body>
+</html>
